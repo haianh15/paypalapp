@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lịch Sử - PayPal Math</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body class="history-page">
+
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">🧮</span>
+        <span class="logo-text">PayPal <span class="logo-accent">Math</span></span>
+      </div>
+      <nav class="nav">
+        <a href="index.html" class="nav-link">🏠 Trang chủ</a>
+        <a href="history.html" class="nav-link active">📋 Lịch sử</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="history-main">
+    <div class="history-header">
+      <h1 class="page-title">📋 Lịch Sử Làm Bài</h1>
+      <button class="btn btn--danger" id="clearBtn" onclick="confirmClear()">🗑 Xóa tất cả</button>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+      <div class="summary-card summary-card--blue">
+        <span class="summary-icon">📝</span>
+        <span class="summary-num" id="totalTests">0</span>
+        <span class="summary-label">Tổng bài làm</span>
+      </div>
+      <div class="summary-card summary-card--green">
+        <span class="summary-icon">✅</span>
+        <span class="summary-num" id="avgScore">0%</span>
+        <span class="summary-label">Điểm trung bình</span>
+      </div>
+      <div class="summary-card summary-card--yellow">
+        <span class="summary-icon">🏆</span>
+        <span class="summary-num" id="bestScore">0%</span>
+        <span class="summary-label">Điểm cao nhất</span>
+      </div>
+      <div class="summary-card summary-card--purple">
+        <span class="summary-icon">📊</span>
+        <span class="summary-num" id="totalQuestions">0</span>
+        <span class="summary-label">Tổng câu đã làm</span>
+      </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="filter-bar">
+      <span class="filter-label">Lọc theo số câu:</span>
+      <button class="filter-btn active" onclick="filterHistory('all', this)">Tất cả</button>
+      <button class="filter-btn" onclick="filterHistory(20, this)">20 câu</button>
+      <button class="filter-btn" onclick="filterHistory(50, this)">50 câu</button>
+      <button class="filter-btn" onclick="filterHistory(100, this)">100 câu</button>
+    </div>
+
+    <!-- History List -->
+    <div id="historyList" class="history-list"></div>
+
+  </main>
+
+  <!-- Modal detail -->
+  <div id="detailModal" class="modal hidden">
+    <div class="modal-overlay" onclick="closeModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Chi tiết bài làm</h3>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div id="modalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Confirm clear modal -->
+  <div id="confirmModal" class="modal hidden">
+    <div class="modal-overlay" onclick="cancelClear()"></div>
+    <div class="modal-content modal-content--small">
+      <div class="modal-header">
+        <h3>⚠️ Xác nhận xóa</h3>
+      </div>
+      <div class="modal-body">
+        <p>Bạn có chắc muốn xóa toàn bộ lịch sử làm bài không? Hành động này không thể hoàn tác.</p>
+        <div class="confirm-actions">
+          <button class="btn btn--outline" onclick="cancelClear()">Hủy</button>
+          <button class="btn btn--danger" onclick="clearHistory()">Xóa tất cả</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/questions.js"></script>
+  <script src="js/history.js"></script>
+  <script>
+    let allHistory = [];
+    let currentFilter = 'all';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      allHistory = getHistory();
+      renderSummary();
+      renderHistory(allHistory);
+    });
+
+    function renderSummary() {
+      document.getElementById('totalTests').textContent = allHistory.length;
+      if (allHistory.length === 0) {
+        document.getElementById('avgScore').textContent = '0%';
+        document.getElementById('bestScore').textContent = '0%';
+        document.getElementById('totalQuestions').textContent = '0';
+        return;
+      }
+      const scores = allHistory.map(h => h.score);
+      document.getElementById('avgScore').textContent =
+        Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) + '%';
+      document.getElementById('bestScore').textContent = Math.max(...scores) + '%';
+      document.getElementById('totalQuestions').textContent =
+        allHistory.reduce((a, b) => a + b.total, 0);
+    }
+
+    function filterHistory(count, btn) {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = count;
+      const filtered = count === 'all' ? allHistory : allHistory.filter(h => h.total === count);
+      renderHistory(filtered);
+    }
+
+    function renderHistory(list) {
+      const container = document.getElementById('historyList');
+      if (list.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <span class="empty-icon">📚</span>
+            <p>Chưa có lịch sử làm bài nào.</p>
+            <a href="index.html" class="btn btn--primary" style="margin-top:1rem">Bắt đầu luyện tập</a>
+          </div>`;
+        return;
+      }
+      container.innerHTML = list.map((h, i) => `
+        <div class="history-item" onclick="showDetail(${h._index})">
+          <div class="history-item-left">
+            <div class="history-rank">#${i + 1}</div>
+            <div class="history-info">
+              <div class="history-title">${h.total} câu hỏi</div>
+              <div class="history-meta">
+                <span>📅 ${formatDate(h.date)}</span>
+                <span>⏱ ${h.duration || '--'}</span>
+              </div>
+            </div>
+          </div>
+          <div class="history-item-right">
+            <div class="history-correct">✅ ${h.correct}/${h.total}</div>
+            <div class="history-score-badge ${getScoreClass(h.score)}">${h.score}%</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function showDetail(index) {
+      const h = allHistory.find(x => x._index === index);
+      if (!h) return;
+      document.getElementById('modalTitle').textContent = `Chi tiết bài ${h.total} câu — ${formatDate(h.date)}`;
+      const body = document.getElementById('modalBody');
+
+      const scoreClass = getScoreClass(h.score);
+      body.innerHTML = `
+        <div class="modal-score ${scoreClass}">${h.score}% — ${getScoreEmoji(h.score)} ${getScoreLabel(h.score)}</div>
+        <div class="modal-stats">
+          <span>✅ Đúng: <b>${h.correct}</b></span>
+          <span>❌ Sai: <b>${h.wrong}</b></span>
+          <span>⏭ Bỏ qua: <b>${h.skipped}</b></span>
+          <span>⏱ Thời gian: <b>${h.duration || '--'}</b></span>
+        </div>
+        <div class="modal-review-list">
+          ${(h.answers || []).map((a, i) => `
+            <div class="modal-review-item ${a.correct ? 'review-correct' : 'review-wrong'}">
+              <div class="review-q-num">Câu ${i + 1}</div>
+              <div class="review-q-text">${a.question}</div>
+              <div class="review-q-answer">
+                <span>Bạn trả lời: <b>${a.chosen !== null && a.chosen !== undefined ? a.chosen : 'Bỏ qua'}</b></span>
+                ${!a.correct ? `<span class="correct-ans">Đáp án đúng: <b>${a.answer}</b></span>` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      document.getElementById('detailModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('detailModal').classList.add('hidden');
+    }
+
+    function confirmClear() {
+      document.getElementById('confirmModal').classList.remove('hidden');
+    }
+
+    function cancelClear() {
+      document.getElementById('confirmModal').classList.add('hidden');
+    }
+
+    function clearHistory() {
+      clearAllHistory();
+      allHistory = [];
+      cancelClear();
+      renderSummary();
+      renderHistory([]);
+    }
+
+    function getScoreClass(score) {
+      if (score >= 80) return 'score-good';
+      if (score >= 50) return 'score-medium';
+      return 'score-bad';
+    }
+
+    function getScoreEmoji(score) {
+      if (score === 100) return '🏆';
+      if (score >= 80) return '⭐';
+      if (score >= 50) return '👍';
+      return '💪';
+    }
+
+    function getScoreLabel(score) {
+      if (score === 100) return 'Xuất sắc!';
+      if (score >= 80) return 'Giỏi lắm!';
+      if (score >= 50) return 'Khá tốt!';
+      return 'Cần cố gắng thêm!';
+    }
+
+    function formatDate(dateStr) {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('vi-VN', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+  </script>
+</body>
+</html>

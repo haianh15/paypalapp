@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PayPal Math - Luyện Thi Toán Lớp 1</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body class="home-page">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">🧮</span>
+        <span class="logo-text">PayPal <span class="logo-accent">Math</span></span>
+      </div>
+      <nav class="nav">
+        <a href="index.html" class="nav-link active">🏠 Trang chủ</a>
+        <a href="history.html" class="nav-link">📋 Lịch sử</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <main>
+    <section class="hero">
+      <div class="hero-content">
+        <div class="hero-badge">✨ Dành cho học sinh lớp 1</div>
+        <h1 class="hero-title">Luyện Toán<br /><span class="hero-accent">Thật Vui!</span></h1>
+        <p class="hero-desc">Luyện tập các phép tính cộng trừ đơn giản, làm quen với toán học qua những bài tập thú vị và colorful!</p>
+
+        <div class="start-box">
+          <h2 class="start-title">Chọn số câu hỏi</h2>
+          <div class="quiz-options">
+            <a href="practice.html?count=20" class="quiz-card quiz-card--20">
+              <span class="quiz-num">20</span>
+              <span class="quiz-label">câu</span>
+              <span class="quiz-time">⏱ ~10 phút</span>
+            </a>
+            <a href="practice.html?count=50" class="quiz-card quiz-card--50 quiz-card--featured">
+              <span class="quiz-badge-top">Phổ biến</span>
+              <span class="quiz-num">50</span>
+              <span class="quiz-label">câu</span>
+              <span class="quiz-time">⏱ ~25 phút</span>
+            </a>
+            <a href="practice.html?count=100" class="quiz-card quiz-card--100">
+              <span class="quiz-num">100</span>
+              <span class="quiz-label">câu</span>
+              <span class="quiz-time">⏱ ~50 phút</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-art">
+        <div class="floating-card fc1">1 + 1 = 2 🎉</div>
+        <div class="floating-card fc2">5 - 3 = ? 🤔</div>
+        <div class="floating-card fc3">10 + 0 = 10 ⭐</div>
+        <div class="hero-emoji">🦄</div>
+      </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="stats-section">
+      <div class="stat-item">
+        <span class="stat-icon">📝</span>
+        <span class="stat-num" id="totalTests">0</span>
+        <span class="stat-label">Bài đã làm</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-icon">✅</span>
+        <span class="stat-num" id="avgScore">0%</span>
+        <span class="stat-label">Điểm trung bình</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-icon">🏆</span>
+        <span class="stat-num" id="bestScore">0%</span>
+        <span class="stat-label">Điểm cao nhất</span>
+      </div>
+    </section>
+
+    <!-- Recent History -->
+    <section class="recent-section">
+      <div class="recent-header">
+        <h2 class="recent-title">📋 Kết quả gần đây</h2>
+        <a href="history.html" class="see-all-link">Xem tất cả →</a>
+      </div>
+      <div id="recentList" class="recent-list">
+        <div class="empty-state">
+          <span class="empty-icon">📚</span>
+          <p>Chưa có bài làm nào. Hãy bắt đầu luyện tập!</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>🧮 PayPal Math &copy; 2025 — Luyện Thi Toán Lớp 1</p>
+  </footer>
+
+  <script src="js/questions.js"></script>
+  <script src="js/history.js"></script>
+  <script>
+    // Load stats from history
+    document.addEventListener('DOMContentLoaded', () => {
+      const history = getHistory();
+      if (history.length === 0) return;
+
+      document.getElementById('totalTests').textContent = history.length;
+
+      const scores = history.map(h => h.score);
+      const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+      const best = Math.max(...scores);
+
+      document.getElementById('avgScore').textContent = avg + '%';
+      document.getElementById('bestScore').textContent = best + '%';
+
+      // Recent 3
+      const recent = history.slice(0, 3);
+      const list = document.getElementById('recentList');
+      list.innerHTML = recent.map(h => `
+        <div class="recent-item">
+          <div class="recent-info">
+            <span class="recent-count">${h.total} câu</span>
+            <span class="recent-date">${formatDate(h.date)}</span>
+          </div>
+          <div class="recent-score ${getScoreClass(h.score)}">${h.score}%</div>
+        </div>
+      `).join('');
+    });
+
+    function getScoreClass(score) {
+      if (score >= 80) return 'score-good';
+      if (score >= 50) return 'score-medium';
+      return 'score-bad';
+    }
+
+    function formatDate(dateStr) {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+  </script>
+</body>
+</html>
