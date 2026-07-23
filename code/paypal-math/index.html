@@ -10,7 +10,6 @@
 </head>
 <body class="home-page">
 
-  <!-- Header -->
   <header class="header">
     <div class="header-inner">
       <div class="logo">
@@ -24,7 +23,6 @@
     </div>
   </header>
 
-  <!-- Hero -->
   <main>
     <section class="hero">
       <div class="hero-content">
@@ -53,6 +51,22 @@
             </a>
           </div>
         </div>
+
+        <!-- Device ID Box -->
+        <div class="device-box">
+          <div class="device-box-header">
+            <span class="device-box-icon">🔗</span>
+            <div>
+              <div class="device-box-title">Mã thiết bị của bạn</div>
+              <div class="device-box-desc">Dùng mã này để xem lịch sử trên thiết bị khác</div>
+            </div>
+          </div>
+          <div class="device-id-row">
+            <code class="device-id-code" id="deviceIdDisplay">...</code>
+            <button class="btn-copy" id="copyBtn" onclick="copyDeviceId()" title="Sao chép">📋</button>
+          </div>
+          <div class="device-copied" id="copiedMsg" style="display:none">✅ Đã sao chép!</div>
+        </div>
       </div>
 
       <div class="hero-art">
@@ -67,17 +81,17 @@
     <section class="stats-section">
       <div class="stat-item">
         <span class="stat-icon">📝</span>
-        <span class="stat-num" id="totalTests">0</span>
+        <span class="stat-num" id="totalTests">...</span>
         <span class="stat-label">Bài đã làm</span>
       </div>
       <div class="stat-item">
         <span class="stat-icon">✅</span>
-        <span class="stat-num" id="avgScore">0%</span>
+        <span class="stat-num" id="avgScore">...</span>
         <span class="stat-label">Điểm trung bình</span>
       </div>
       <div class="stat-item">
         <span class="stat-icon">🏆</span>
-        <span class="stat-num" id="bestScore">0%</span>
+        <span class="stat-num" id="bestScore">...</span>
         <span class="stat-label">Điểm cao nhất</span>
       </div>
     </section>
@@ -90,8 +104,8 @@
       </div>
       <div id="recentList" class="recent-list">
         <div class="empty-state">
-          <span class="empty-icon">📚</span>
-          <p>Chưa có bài làm nào. Hãy bắt đầu luyện tập!</p>
+          <span class="empty-icon">⏳</span>
+          <p>Đang tải dữ liệu...</p>
         </div>
       </div>
     </section>
@@ -101,27 +115,50 @@
     <p>🧮 PayPal Math &copy; 2025 — Luyện Thi Toán Lớp 1</p>
   </footer>
 
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
   <script src="js/questions.js"></script>
+  <script src="js/firebase.js"></script>
   <script src="js/history.js"></script>
   <script>
-    // Load stats from history
     document.addEventListener('DOMContentLoaded', () => {
-      const history = getHistory();
-      if (history.length === 0) return;
+      // Hien thi Device ID
+      const devId = getDeviceId();
+      document.getElementById('deviceIdDisplay').textContent = devId;
 
+      // Load stats tu Firebase
+      getHistory(function(historyData) {
+        renderStats(historyData);
+        renderRecent(historyData);
+      });
+    });
+
+    function renderStats(history) {
+      if (history.length === 0) {
+        document.getElementById('totalTests').textContent = '0';
+        document.getElementById('avgScore').textContent   = '0%';
+        document.getElementById('bestScore').textContent  = '0%';
+        return;
+      }
       document.getElementById('totalTests').textContent = history.length;
-
       const scores = history.map(h => h.score);
-      const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-      const best = Math.max(...scores);
+      document.getElementById('avgScore').textContent  = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) + '%';
+      document.getElementById('bestScore').textContent = Math.max(...scores) + '%';
+    }
 
-      document.getElementById('avgScore').textContent = avg + '%';
-      document.getElementById('bestScore').textContent = best + '%';
-
-      // Recent 3
-      const recent = history.slice(0, 3);
+    function renderRecent(history) {
       const list = document.getElementById('recentList');
-      list.innerHTML = recent.map(h => `
+      if (history.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <span class="empty-icon">📚</span>
+            <p>Chưa có bài làm nào. Hãy bắt đầu luyện tập!</p>
+          </div>`;
+        return;
+      }
+      list.innerHTML = history.slice(0, 3).map(h => `
         <div class="recent-item">
           <div class="recent-info">
             <span class="recent-count">${h.total} câu</span>
@@ -130,7 +167,27 @@
           <div class="recent-score ${getScoreClass(h.score)}">${h.score}%</div>
         </div>
       `).join('');
-    });
+    }
+
+    function copyDeviceId() {
+      const id = getDeviceId();
+      navigator.clipboard.writeText(id).then(() => {
+        const msg = document.getElementById('copiedMsg');
+        msg.style.display = 'block';
+        setTimeout(() => { msg.style.display = 'none'; }, 2000);
+      }).catch(() => {
+        // Fallback cho trinh duyet cu
+        const el = document.createElement('textarea');
+        el.value = id;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        const msg = document.getElementById('copiedMsg');
+        msg.style.display = 'block';
+        setTimeout(() => { msg.style.display = 'none'; }, 2000);
+      });
+    }
 
     function getScoreClass(score) {
       if (score >= 80) return 'score-good';
@@ -140,7 +197,10 @@
 
     function formatDate(dateStr) {
       const d = new Date(dateStr);
-      return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      return d.toLocaleDateString('vi-VN', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
     }
   </script>
 </body>

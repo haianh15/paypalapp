@@ -50,7 +50,7 @@
       </div>
     </div>
 
-    <!-- Result Area (hidden initially) -->
+    <!-- Result Area -->
     <div id="resultArea" class="result-area hidden">
       <div class="result-card">
         <div class="result-emoji" id="resultEmoji">🎉</div>
@@ -58,20 +58,22 @@
         <div class="result-score-big" id="resultScoreBig">0%</div>
         <div class="result-stats">
           <div class="result-stat">
-            <span class="result-stat-icon correct-icon">✅</span>
+            <span class="result-stat-icon">✅</span>
             <span id="correctCount">0</span> đúng
           </div>
           <div class="result-stat">
-            <span class="result-stat-icon wrong-icon">❌</span>
+            <span class="result-stat-icon">❌</span>
             <span id="wrongCount">0</span> sai
           </div>
           <div class="result-stat">
-            <span class="result-stat-icon skip-icon">⏭</span>
+            <span class="result-stat-icon">⏭</span>
             <span id="skipCount">0</span> bỏ qua
           </div>
         </div>
         <div class="result-time">⏱ Thời gian: <strong id="totalTime">00:00</strong></div>
         <div class="result-message" id="resultMessage"></div>
+        <!-- Trang thai luu Firebase -->
+        <div class="save-status" id="saveStatus"></div>
 
         <div class="result-actions">
           <button class="btn btn--outline" onclick="reviewAnswers()">🔍 Xem lại đáp án</button>
@@ -81,7 +83,7 @@
       </div>
     </div>
 
-    <!-- Review Area (hidden initially) -->
+    <!-- Review Area -->
     <div id="reviewArea" class="review-area hidden">
       <div class="review-header">
         <h2>🔍 Xem lại đáp án</h2>
@@ -92,7 +94,12 @@
 
   </main>
 
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
   <script src="js/questions.js"></script>
+  <script src="js/firebase.js"></script>
   <script src="js/history.js"></script>
   <script src="js/app.js"></script>
 </body>

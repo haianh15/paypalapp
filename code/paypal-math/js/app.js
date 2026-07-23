@@ -211,7 +211,10 @@ function submitQuiz() {
   const score = Math.round((correct / totalCount) * 100);
   const duration = secondsToTime(elapsedSeconds);
 
-  // Lưu lịch sử
+  // Lưu lịch sử (Firebase + localStorage)
+  const saveEl = document.getElementById('saveStatus');
+  if (saveEl) { saveEl.className = 'save-status saving'; saveEl.textContent = '⏳ Đang lưu lên đám mây...'; }
+
   saveHistory({
     total:    totalCount,
     correct,
@@ -221,6 +224,10 @@ function submitQuiz() {
     duration,
     answers:  answerDetails,
     date:     new Date().toISOString(),
+  }).then(() => {
+    if (saveEl) { saveEl.className = 'save-status saved'; saveEl.textContent = '☁️ Đã lưu lên Firebase!'; }
+  }).catch(() => {
+    if (saveEl) { saveEl.className = 'save-status save-err'; saveEl.textContent = '⚠️ Lưu local (offline)'; }
   });
 
   showResult({ correct, wrong, skipped, score, duration });

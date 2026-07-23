@@ -23,6 +23,28 @@
   </header>
 
   <main class="history-main">
+
+    <!-- Device ID Panel -->
+    <div class="device-panel">
+      <div class="device-panel-left">
+        <span class="device-panel-icon">🔗</span>
+        <div>
+          <div class="device-panel-label">Mã thiết bị hiện tại</div>
+          <code class="device-panel-code" id="currentDeviceId">...</code>
+        </div>
+      </div>
+      <div class="device-panel-right">
+        <div class="device-switch-label">Xem lịch sử thiết bị khác:</div>
+        <div class="device-switch-row">
+          <input type="text" id="otherDeviceInput" class="device-input"
+            placeholder="Nhập mã thiết bị..." maxlength="20" />
+          <button class="btn btn--primary btn--sm" onclick="switchDevice()">Xem</button>
+          <button class="btn btn--outline btn--sm" onclick="resetToMyDevice()">Về máy tôi</button>
+        </div>
+        <div class="device-viewing" id="deviceViewingMsg"></div>
+      </div>
+    </div>
+
     <div class="history-header">
       <h1 class="page-title">📋 Lịch Sử Làm Bài</h1>
       <button class="btn btn--danger" id="clearBtn" onclick="confirmClear()">🗑 Xóa tất cả</button>
@@ -32,22 +54,22 @@
     <div class="summary-cards">
       <div class="summary-card summary-card--blue">
         <span class="summary-icon">📝</span>
-        <span class="summary-num" id="totalTests">0</span>
+        <span class="summary-num" id="totalTests">...</span>
         <span class="summary-label">Tổng bài làm</span>
       </div>
       <div class="summary-card summary-card--green">
         <span class="summary-icon">✅</span>
-        <span class="summary-num" id="avgScore">0%</span>
+        <span class="summary-num" id="avgScore">...</span>
         <span class="summary-label">Điểm trung bình</span>
       </div>
       <div class="summary-card summary-card--yellow">
         <span class="summary-icon">🏆</span>
-        <span class="summary-num" id="bestScore">0%</span>
+        <span class="summary-num" id="bestScore">...</span>
         <span class="summary-label">Điểm cao nhất</span>
       </div>
       <div class="summary-card summary-card--purple">
         <span class="summary-icon">📊</span>
-        <span class="summary-num" id="totalQuestions">0</span>
+        <span class="summary-num" id="totalQuestions">...</span>
         <span class="summary-label">Tổng câu đã làm</span>
       </div>
     </div>
@@ -59,6 +81,11 @@
       <button class="filter-btn" onclick="filterHistory(20, this)">20 câu</button>
       <button class="filter-btn" onclick="filterHistory(50, this)">50 câu</button>
       <button class="filter-btn" onclick="filterHistory(100, this)">100 câu</button>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" class="loading-indicator">
+      <span class="loading-spinner"></span> Đang tải từ Firebase...
     </div>
 
     <!-- History List -->
@@ -89,29 +116,70 @@
         <p>Bạn có chắc muốn xóa toàn bộ lịch sử làm bài không? Hành động này không thể hoàn tác.</p>
         <div class="confirm-actions">
           <button class="btn btn--outline" onclick="cancelClear()">Hủy</button>
-          <button class="btn btn--danger" onclick="clearHistory()">Xóa tất cả</button>
+          <button class="btn btn--danger" onclick="doDeleteHistory()">Xóa tất cả</button>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
   <script src="js/questions.js"></script>
+  <script src="js/firebase.js"></script>
   <script src="js/history.js"></script>
   <script>
-    let allHistory = [];
+    let allHistory    = [];
     let currentFilter = 'all';
+    let viewingDevice = null; // null = thiet bi cua minh
 
     document.addEventListener('DOMContentLoaded', () => {
-      allHistory = getHistory();
-      renderSummary();
-      renderHistory(allHistory);
+      // Hien thi Device ID hien tai
+      document.getElementById('currentDeviceId').textContent = getDeviceId();
+      loadHistory();
     });
+
+    function loadHistory(deviceId) {
+      viewingDevice = deviceId || null;
+      document.getElementById('loadingIndicator').style.display = 'flex';
+      document.getElementById('historyList').innerHTML = '';
+
+      // Hien thi dang xem may nao
+      const msg = document.getElementById('deviceViewingMsg');
+      if (viewingDevice && viewingDevice !== getDeviceId()) {
+        msg.textContent = '👁 Dang xem: ' + viewingDevice;
+        msg.style.color = 'var(--accent)';
+        document.getElementById('clearBtn').style.display = 'none';
+      } else {
+        msg.textContent = '';
+        document.getElementById('clearBtn').style.display = '';
+      }
+
+      getHistory(viewingDevice, function(data) {
+        allHistory = data;
+        document.getElementById('loadingIndicator').style.display = 'none';
+        renderSummary();
+        applyFilter();
+      });
+    }
+
+    function switchDevice() {
+      const input = document.getElementById('otherDeviceInput').value.trim().toUpperCase();
+      if (!input) { alert('Vui long nhap ma thiet bi.'); return; }
+      loadHistory(input);
+    }
+
+    function resetToMyDevice() {
+      document.getElementById('otherDeviceInput').value = '';
+      loadHistory(null);
+    }
 
     function renderSummary() {
       document.getElementById('totalTests').textContent = allHistory.length;
       if (allHistory.length === 0) {
-        document.getElementById('avgScore').textContent = '0%';
-        document.getElementById('bestScore').textContent = '0%';
+        document.getElementById('avgScore').textContent      = '0%';
+        document.getElementById('bestScore').textContent     = '0%';
         document.getElementById('totalQuestions').textContent = '0';
         return;
       }
@@ -123,12 +191,18 @@
         allHistory.reduce((a, b) => a + b.total, 0);
     }
 
+    function applyFilter() {
+      const filtered = currentFilter === 'all'
+        ? allHistory
+        : allHistory.filter(h => h.total === currentFilter);
+      renderHistory(filtered);
+    }
+
     function filterHistory(count, btn) {
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentFilter = count;
-      const filtered = count === 'all' ? allHistory : allHistory.filter(h => h.total === count);
-      renderHistory(filtered);
+      applyFilter();
     }
 
     function renderHistory(list) {
@@ -137,8 +211,8 @@
         container.innerHTML = `
           <div class="empty-state">
             <span class="empty-icon">📚</span>
-            <p>Chưa có lịch sử làm bài nào.</p>
-            <a href="index.html" class="btn btn--primary" style="margin-top:1rem">Bắt đầu luyện tập</a>
+            <p>Chua co lich su lam bai nao.</p>
+            <a href="index.html" class="btn btn--primary" style="margin-top:1rem">Bat dau luyen tap</a>
           </div>`;
         return;
       }
@@ -165,9 +239,9 @@
     function showDetail(index) {
       const h = allHistory.find(x => x._index === index);
       if (!h) return;
-      document.getElementById('modalTitle').textContent = `Chi tiết bài ${h.total} câu — ${formatDate(h.date)}`;
+      document.getElementById('modalTitle').textContent =
+        'Chi tiet bai ' + h.total + ' cau - ' + formatDate(h.date);
       const body = document.getElementById('modalBody');
-
       const scoreClass = getScoreClass(h.score);
       body.innerHTML = `
         <div class="modal-score ${scoreClass}">${h.score}% — ${getScoreEmoji(h.score)} ${getScoreLabel(h.score)}</div>
@@ -184,7 +258,7 @@
               <div class="review-q-text">${a.question}</div>
               <div class="review-q-answer">
                 <span>Bạn trả lời: <b>${a.chosen !== null && a.chosen !== undefined ? a.chosen : 'Bỏ qua'}</b></span>
-                ${!a.correct ? `<span class="correct-ans">Đáp án đúng: <b>${a.answer}</b></span>` : ''}
+                ${!a.correct ? '<span class="correct-ans">Đáp án đúng: <b>' + a.answer + '</b></span>' : ''}
               </div>
             </div>
           `).join('')}
@@ -205,34 +279,33 @@
       document.getElementById('confirmModal').classList.add('hidden');
     }
 
-    function clearHistory() {
-      clearAllHistory();
-      allHistory = [];
-      cancelClear();
-      renderSummary();
-      renderHistory([]);
+    function doDeleteHistory() {
+      clearAllHistory().then(() => {
+        allHistory = [];
+        cancelClear();
+        renderSummary();
+        renderHistory([]);
+      });
     }
 
+    // ===== HELPERS =====
     function getScoreClass(score) {
       if (score >= 80) return 'score-good';
       if (score >= 50) return 'score-medium';
       return 'score-bad';
     }
-
     function getScoreEmoji(score) {
       if (score === 100) return '🏆';
-      if (score >= 80) return '⭐';
-      if (score >= 50) return '👍';
+      if (score >= 80)  return '⭐';
+      if (score >= 50)  return '👍';
       return '💪';
     }
-
     function getScoreLabel(score) {
       if (score === 100) return 'Xuất sắc!';
-      if (score >= 80) return 'Giỏi lắm!';
-      if (score >= 50) return 'Khá tốt!';
+      if (score >= 80)  return 'Giỏi lắm!';
+      if (score >= 50)  return 'Khá tốt!';
       return 'Cần cố gắng thêm!';
     }
-
     function formatDate(dateStr) {
       const d = new Date(dateStr);
       return d.toLocaleDateString('vi-VN', {
