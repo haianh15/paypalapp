@@ -42,7 +42,6 @@
         <div class="question-text" id="questionText">Đang tải...</div>
         <div class="options-grid" id="optionsGrid"></div>
       </div>
-
       <div class="quiz-nav">
         <button class="btn btn--outline" id="prevBtn" onclick="prevQuestion()" disabled>← Câu trước</button>
         <div class="dot-nav" id="dotNav"></div>
@@ -57,28 +56,17 @@
         <h2 class="result-title" id="resultTitle">Hoàn thành!</h2>
         <div class="result-score-big" id="resultScoreBig">0%</div>
         <div class="result-stats">
-          <div class="result-stat">
-            <span class="result-stat-icon">✅</span>
-            <span id="correctCount">0</span> đúng
-          </div>
-          <div class="result-stat">
-            <span class="result-stat-icon">❌</span>
-            <span id="wrongCount">0</span> sai
-          </div>
-          <div class="result-stat">
-            <span class="result-stat-icon">⏭</span>
-            <span id="skipCount">0</span> bỏ qua
-          </div>
+          <div class="result-stat"><span>✅</span> <span id="correctCount">0</span> đúng</div>
+          <div class="result-stat"><span>❌</span> <span id="wrongCount">0</span> sai</div>
+          <div class="result-stat"><span>⏭</span> <span id="skipCount">0</span> bỏ qua</div>
         </div>
         <div class="result-time">⏱ Thời gian: <strong id="totalTime">00:00</strong></div>
         <div class="result-message" id="resultMessage"></div>
-        <!-- Trang thai luu Firebase -->
         <div class="save-status" id="saveStatus"></div>
-
         <div class="result-actions">
           <button class="btn btn--outline" onclick="reviewAnswers()">🔍 Xem lại đáp án</button>
           <a href="index.html" class="btn btn--primary">🏠 Về trang chủ</a>
-          <button class="btn btn--accent" id="retryBtn" onclick="retryQuiz()">🔄 Làm lại</button>
+          <button class="btn btn--accent" onclick="retryQuiz()">🔄 Làm lại</button>
         </div>
       </div>
     </div>
@@ -97,7 +85,6 @@
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
   <script src="js/questions.js"></script>
   <script src="js/firebase.js"></script>
   <script src="js/history.js"></script>

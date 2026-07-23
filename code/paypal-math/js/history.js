@@ -1,23 +1,19 @@
 /**
  * history.js
- * Quan ly lich su lam bai
  * - Luu/doc Firebase Realtime Database (chinh)
  * - Fallback localStorage neu Firebase chua san sang
  */
 
 const STORAGE_KEY = 'paypal_math_history';
 
-// ===== LOCALSTORAGE HELPERS (fallback + cache) =====
+// ===== LOCALSTORAGE (fallback) =====
 
 function getHistoryLocal() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
-    const data = JSON.parse(raw);
-    return data.map((item, i) => ({ ...item, _index: i }));
-  } catch {
-    return [];
-  }
+    return JSON.parse(raw).map((item, i) => ({ ...item, _index: i }));
+  } catch { return []; }
 }
 
 function saveHistoryLocal(result) {
@@ -25,20 +21,13 @@ function saveHistoryLocal(result) {
     const raw  = localStorage.getItem(STORAGE_KEY);
     const data = raw ? JSON.parse(raw) : [];
     data.unshift({
-      total:    result.total,
-      correct:  result.correct,
-      wrong:    result.wrong,
-      skipped:  result.skipped,
-      score:    result.score,
-      duration: result.duration,
-      answers:  result.answers,
-      date:     result.date || new Date().toISOString(),
+      total: result.total, correct: result.correct, wrong: result.wrong,
+      skipped: result.skipped, score: result.score, duration: result.duration,
+      answers: result.answers, date: result.date || new Date().toISOString()
     });
     if (data.length > 200) data.splice(200);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch (e) {
-    console.error('localStorage save failed:', e);
-  }
+  } catch (e) { console.error('localStorage save failed:', e); }
 }
 
 function clearHistoryLocal() {
@@ -48,28 +37,20 @@ function clearHistoryLocal() {
 // ===== PUBLIC API =====
 
 /**
- * Lay toan bo lich su.
- * - Neu Firebase san sang: lay tu Firebase
- * - Neu khong: lay tu localStorage
- * @param {string}   [deviceId]  - de xem lich su thiet bi khac
- * @param {Function} callback    - callback(array) khi co du lieu
+ * Lay lich su — tu dong dung Firebase, fallback local
+ * @param {Function} callback(array)
  */
-function getHistory(deviceId, callback) {
-  // Ho tro goi cu: getHistory() khong co tham so -> tra ve local
-  if (typeof deviceId === 'undefined' && typeof callback === 'undefined') {
+function getHistory(callback) {
+  // Neu goi khong co callback (kieu cu) -> tra ve local sync
+  if (typeof callback !== 'function') {
     return getHistoryLocal();
-  }
-  // Neu chi truyen callback (khong co deviceId)
-  if (typeof deviceId === 'function') {
-    callback = deviceId;
-    deviceId = null;
   }
 
   if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
-    getHistoryFromFirebase(deviceId)
+    getHistoryFromFirebase()
       .then(data => callback(data))
       .catch(err => {
-        console.warn('Firebase read failed, fallback localStorage:', err);
+        console.warn('Firebase read failed, dung local:', err);
         callback(getHistoryLocal());
       });
   } else {
@@ -78,16 +59,13 @@ function getHistory(deviceId, callback) {
 }
 
 /**
- * Luu 1 ket qua moi.
- * Luu song song ca Firebase lan localStorage.
+ * Luu ket qua — Firebase + local song song
  * @param {object} result
  * @returns {Promise}
  */
 function saveHistory(result) {
-  // Luon luu local truoc (instant, offline-safe)
-  saveHistoryLocal(result);
+  saveHistoryLocal(result); // luu local ngay lap tuc
 
-  // Luu len Firebase neu co
   if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
     return saveHistoryToFirebase(result).catch(err => {
       console.warn('Firebase write failed (da luu local):', err);
@@ -97,21 +75,18 @@ function saveHistory(result) {
 }
 
 /**
- * Xoa toan bo lich su (ca Firebase lan local).
+ * Xoa toan bo lich su (Firebase + local)
  * @returns {Promise}
  */
 function clearAllHistory() {
   clearHistoryLocal();
   if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
-    return clearHistoryOnFirebase().catch(err => {
-      console.warn('Firebase clear failed:', err);
-    });
+    return clearHistoryOnFirebase().catch(err => console.warn('Firebase clear failed:', err));
   }
   return Promise.resolve();
 }
 
 // ===== UTILS =====
-
 function secondsToTime(s) {
   const m   = Math.floor(s / 60).toString().padStart(2, '0');
   const sec = (s % 60).toString().padStart(2, '0');
